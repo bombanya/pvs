@@ -66,7 +66,7 @@ uint32_t time_last_pressed;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-void set_code(uint8_t code);
+void set_code(uint8_t proto);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,18 +113,18 @@ int main(void)
     /* USER CODE END WHILE */
 	  if(pressed){
 		  pressed = false;
-		  if(i < 8 && pressed_type == code[i]){
-			  i++;
+		  if(pos < 8 && pressed_type == code[pos]){
+			  pos++;
 			  // Blink yellow LED
 		  }
-		  else if(i < 8 && pressed_type != code[i]){
-			  i = 0;
+		  else if(pos < 8 && pressed_type != code[pos]){
+			  pos = 0;
 			  // Blink red LED
 		  }
 	  }
 	  else if(HAL_GetTick() - time_last_pressed > TIME_LIMIT_TICKS)
-		  i = 0;
-	  if(i == 8){
+		  pos = 0;
+	  if(pos == 8){
 		  // Light up green LED
 	  }
     /* USER CODE BEGIN 3 */
@@ -182,9 +182,9 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void set_code(uint8_t code){
+void set_code(uint8_t proto){
 	for(size_t i = 0; i < sizeof(uint8_t); i++){
-		code[i] = (code >> (sizeof(uint8_t) - i - 1)) & 1;
+		code[i] = (proto >> (sizeof(uint8_t) - i - 1)) & 1;
 	}
 }
 
