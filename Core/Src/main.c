@@ -24,6 +24,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+
+#include "LED.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,6 +38,9 @@
 #define TIME_LIMIT_TICKS 30000
 #define SHORT_PRESS_MIN_TICKS 50
 #define LONG_PRESS_MIN_TICKS 1000
+#define CODE 0xD4
+#define TIMES_BLINK 3
+#define BLINK_PERIOD 500
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,6 +49,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
 /* USER CODE BEGIN PV */
 enum press_type{
 	SHORT = 0,
@@ -90,7 +96,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  set_code(0xD4);
+  set_code(CODE);
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -103,30 +109,40 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-
+  LED_turn_off(RED);
+  LED_turn_off(GREEN);
+  LED_turn_off(YELLOW);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		if (pressed) {
+			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+			pressed = false;
+			if (pos < 8 && pressed_type == code[pos]) {
+				uint8_t i;
+				pos++;
+				for(i = 0; i < TIMES_BLINK; i++)
+					LED_blink(YELLOW, BLINK_PERIOD);
+			} else if (pos < 8 && pressed_type != code[pos]) {
+				uint8_t i;
+				pos = 0;
+				for(i = 0; i < TIMES_BLINK; i++)
+					LED_blink(RED, BLINK_PERIOD);
+			}
+			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+		} else if (HAL_GetTick() - time_last_pressed > TIME_LIMIT_TICKS)
+			pos = 0;
+		if (pos == 8) {
+			LED_turn_on(GREEN);
+			HAL_Delay(TIME_LIMIT_TICKS);
+			LED_turn_off(GREEN);
+			pos = 0;
+		}
     /* USER CODE END WHILE */
-	  if(pressed){
-		  pressed = false;
-		  if(pos < 8 && pressed_type == code[pos]){
-			  pos++;
-			  // Blink yellow LED
-		  }
-		  else if(pos < 8 && pressed_type != code[pos]){
-			  pos = 0;
-			  // Blink red LED
-		  }
-	  }
-	  else if(HAL_GetTick() - time_last_pressed > TIME_LIMIT_TICKS)
-		  pos = 0;
-	  if(pos == 8){
-		  // Light up green LED
-	  }
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

@@ -1,0 +1,3 @@
+../Core/Src/LED.c:11:6:LED_turn_on	16	static
+../Core/Src/LED.c:26:6:LED_turn_off	16	static
+../Core/Src/LED.c:40:6:LED_blink	24	static
