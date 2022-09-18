@@ -38,6 +38,7 @@
 #define CODE 0xD4
 #define TIMES_BLINK 3
 #define BLINK_PERIOD 500
+#define MAX_TIMES_PRESSED_WRONG 3
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,6 +53,8 @@
 enum press_type code[8];
 
 uint8_t pos = 0;
+
+uint8_t times_pressed_wrong = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -111,10 +114,23 @@ int main(void)
 				for(i = 0; i < TIMES_BLINK; i++)
 					LED_blink(YELLOW, BLINK_PERIOD);
 			} else if (pos < 8 && side_button_get_pressed_type() != code[pos]) {
-				uint8_t i;
-				pos = 0;
-				for(i = 0; i < TIMES_BLINK; i++)
-					LED_blink(RED, BLINK_PERIOD);
+//				uint8_t i;
+//				pos = 0;
+//				for(i = 0; i < TIMES_BLINK; i++)
+//					LED_blink(RED, BLINK_PERIOD);
+				times_pressed_wrong++;
+				if(times_pressed_wrong <= MAX_TIMES_PRESSED_WRONG) {
+					uint8_t i;
+					for(i = 0; i < TIMES_BLINK; i++){
+						LED_blink(RED, BLINK_PERIOD);
+					}
+				}
+				else {
+					LED_turn_on(RED);
+					HAL_Delay(TIME_LIMIT_TICKS);
+					LED_turn_off(RED);
+					pos = 0;
+				}
 			}
 			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 		} else if (HAL_GetTick() - side_button_get_time_last_pressed() > TIME_LIMIT_TICKS)
