@@ -23,7 +23,8 @@ void LED_turn_on(enum color col)
 	}
 }
 
-void LED_turn_off(enum color col){
+void LED_turn_off(enum color col)
+{
 	switch(col){
 	case RED:
 		HAL_GPIO_WritePin(RED_LED_GPIO_Port, RED_LED_Pin, GPIO_PIN_RESET);
@@ -37,7 +38,8 @@ void LED_turn_off(enum color col){
 	}
 }
 
-void LED_blink(enum color col, uint32_t period){
+void LED_blink(enum color col, uint32_t period)
+{
 	uint32_t dark = period / 2;
 	uint32_t light = period - dark;
 	LED_turn_on(col);

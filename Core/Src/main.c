@@ -23,9 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdbool.h>
-
 #include "LED.h"
+#include "side_button.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,8 +35,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define TIME_LIMIT_TICKS 30000
-#define SHORT_PRESS_MIN_TICKS 50
-#define LONG_PRESS_MIN_TICKS 1000
 #define CODE 0xD4
 #define TIMES_BLINK 3
 #define BLINK_PERIOD 500
@@ -51,22 +48,10 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-enum press_type{
-	SHORT = 0,
-	LONG
-};
-
-enum press_type pressed_type;
 
 enum press_type code[8];
 
-bool pressed = false;
-
 uint8_t pos = 0;
-
-uint32_t pressed_cnt = 0;
-
-uint32_t time_last_pressed;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -118,22 +103,21 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		if (pressed) {
+		if (side_button_get_pressed()) {
 			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
-			pressed = false;
-			if (pos < 8 && pressed_type == code[pos]) {
+			if (pos < 8 && side_button_get_pressed_type() == code[pos]) {
 				uint8_t i;
 				pos++;
 				for(i = 0; i < TIMES_BLINK; i++)
 					LED_blink(YELLOW, BLINK_PERIOD);
-			} else if (pos < 8 && pressed_type != code[pos]) {
+			} else if (pos < 8 && side_button_get_pressed_type() != code[pos]) {
 				uint8_t i;
 				pos = 0;
 				for(i = 0; i < TIMES_BLINK; i++)
 					LED_blink(RED, BLINK_PERIOD);
 			}
 			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-		} else if (HAL_GetTick() - time_last_pressed > TIME_LIMIT_TICKS)
+		} else if (HAL_GetTick() - side_button_get_time_last_pressed() > TIME_LIMIT_TICKS)
 			pos = 0;
 		if (pos == 8) {
 			LED_turn_on(GREEN);
@@ -207,22 +191,7 @@ void set_code(uint8_t proto){
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if(GPIO_Pin == SIDE_BUTTON_Pin){
-		if(HAL_GPIO_ReadPin(SIDE_BUTTON_GPIO_Port, SIDE_BUTTON_Pin))
-			pressed_cnt = HAL_GetTick();
-		else{
-			uint32_t tick = HAL_GetTick();
-			pressed_cnt = tick - pressed_cnt;
-			if(pressed_cnt >= LONG_PRESS_MIN_TICKS){
-				time_last_pressed = tick;
-				pressed = true;
-				pressed_type = LONG;
-			}
-			else if(pressed_cnt >= SHORT_PRESS_MIN_TICKS){
-				time_last_pressed = tick;
-				pressed = true;
-				pressed_type = SHORT;
-			}
-		}
+		side_button_pressed_callback();
 	}
 	else __NOP();
 }
