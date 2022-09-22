@@ -24,4 +24,6 @@ uint32_t side_button_get_time_last_pressed();
 
 void side_button_pressed_callback();
 
+void side_button_reset_time_last_pressed();
+
 #endif /* INC_SIDE_BUTTON_H_ */

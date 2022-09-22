@@ -34,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define TIME_LIMIT_TICKS 30000
+#define TIME_LIMIT_TICKS 10000
 #define CODE 0xD4
 #define TIMES_BLINK 3
 #define BLINK_PERIOD 500
@@ -106,18 +106,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  side_button_pressed_callback();
 		if (side_button_get_pressed()) {
-			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+			//HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
 			if (pos < 8 && side_button_get_pressed_type() == code[pos]) {
 				uint8_t i;
 				pos++;
 				for(i = 0; i < TIMES_BLINK; i++)
 					LED_blink(YELLOW, BLINK_PERIOD);
 			} else if (pos < 8 && side_button_get_pressed_type() != code[pos]) {
-//				uint8_t i;
-//				pos = 0;
-//				for(i = 0; i < TIMES_BLINK; i++)
-//					LED_blink(RED, BLINK_PERIOD);
 				times_pressed_wrong++;
 				if(times_pressed_wrong <= MAX_TIMES_PRESSED_WRONG) {
 					uint8_t i;
@@ -130,16 +127,26 @@ int main(void)
 					HAL_Delay(TIME_LIMIT_TICKS);
 					LED_turn_off(RED);
 					pos = 0;
+					times_pressed_wrong = 0;
 				}
 			}
-			HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-		} else if (HAL_GetTick() - side_button_get_time_last_pressed() > TIME_LIMIT_TICKS)
+			//HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+		} else if (HAL_GetTick() - side_button_get_time_last_pressed() > TIME_LIMIT_TICKS &&
+				(pos != 0 || times_pressed_wrong != 0)){
 			pos = 0;
+			LED_turn_on(RED);
+			HAL_Delay(TIME_LIMIT_TICKS);
+			LED_turn_off(RED);
+			times_pressed_wrong = 0;
+			side_button_reset_time_last_pressed();
+		}
+
 		if (pos == 8) {
 			LED_turn_on(GREEN);
 			HAL_Delay(TIME_LIMIT_TICKS);
 			LED_turn_off(GREEN);
 			pos = 0;
+			times_pressed_wrong = 0;
 		}
     /* USER CODE END WHILE */
 
@@ -199,18 +206,18 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void set_code(uint8_t proto){
-	for(size_t i = 0; i < sizeof(uint8_t); i++){
-		code[i] = (proto >> (sizeof(uint8_t) - i - 1)) & 1;
+	for(size_t i = 0; i < sizeof(uint8_t) * 8; i++){
+		code[i] = (proto >> (sizeof(uint8_t) * 8 - i - 1)) & 1 ? LONG : SHORT;
 	}
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+/*void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if(GPIO_Pin == SIDE_BUTTON_Pin){
 		side_button_pressed_callback();
 	}
 	else __NOP();
-}
+}*/
 /* USER CODE END 4 */
 
 /**
