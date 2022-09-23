@@ -19,12 +19,16 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "LED.h"
 #include "side_button.h"
+#include "queue.h"
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +59,13 @@ enum press_type code[8];
 uint8_t pos = 0;
 
 uint8_t times_pressed_wrong = 0;
+
+uint8_t input;
+struct queue input_queue;
+uint8_t output;
+char output_buffer[128];
+char *timeout_str= "timeout\n\r";
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,6 +96,7 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   set_code(CODE);
+  input_queue = queue_init(256);
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -96,17 +108,23 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
   LED_turn_off(RED);
   LED_turn_off(GREEN);
   LED_turn_off(YELLOW);
+  HAL_UART_Receive_IT(&huart6, &input, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  side_button_pressed_callback();
+	  if (!queue_is_empty(&input_queue)) {
+		  output = queue_pop(&input_queue);
+		  HAL_UART_Transmit(&huart6, &output, 1, 2000);
+	  }
+	  /*side_button_pressed_callback();
 		if (side_button_get_pressed()) {
 			//HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
 			if (pos < 8 && side_button_get_pressed_type() == code[pos]) {
@@ -147,7 +165,7 @@ int main(void)
 			LED_turn_off(GREEN);
 			pos = 0;
 			times_pressed_wrong = 0;
-		}
+		}*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -218,6 +236,13 @@ void set_code(uint8_t proto){
 	}
 	else __NOP();
 }*/
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	if (huart == &huart6) {
+		queue_push(&input_queue, input);
+		HAL_UART_Receive_IT(huart, &input, 1);
+	}
+}
 /* USER CODE END 4 */
 
 /**
