@@ -10,8 +10,8 @@
 
 struct queue queue_init(size_t len) {
 	struct queue q = {0};
-	q.arr = malloc(len);
-	q.len = len;
+	q.arr = malloc(len + 1);
+	q.len = len + 1;
 	return q;
 }
 
@@ -29,9 +29,11 @@ void queue_push(struct queue *q, uint8_t elem){
 	q->arr[q->tail] = elem;
 	q->tail = (q->tail + 1) % q->len;
 }
+
 bool queue_is_empty(struct queue *q){
 	return q->head == q->tail;
 }
+
 bool queue_is_full(struct queue *q){
 	return (q->tail + 1) % q->len == q->head;
 }
