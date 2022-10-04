@@ -7,34 +7,34 @@
 
 #include "uart_io.h"
 #include "usart.h"
-#include <stdio.h>
 
-struct queue* input_queue;
-struct queue* output_queue;
-enum uart_io_mode cur_mode;
 
-uint8_t input_byte;
-uint8_t output_byte;
+static struct queue* input_queue;
+static struct queue* output_queue;
+static enum uart_io_mode cur_mode;
 
-uint8_t nonblocking_write_in_progress = 0;
+static uint8_t input_byte;
+static uint8_t output_byte;
+
+static uint8_t nonblocking_write_in_progress = 0;
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	if (huart == &huart6) {
-		queue_push(input_queue, input_byte);
-		HAL_UART_Receive_IT(&huart6, &input_byte, 1);
-	}
+			queue_push(input_queue, input_byte);
+			HAL_UART_Receive_IT(&huart6, &input_byte, 1);
+		}
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 	if (huart == &huart6) {
-		if (!queue_is_empty(output_queue)) {
-			output_byte = queue_pop(output_queue);
-			HAL_UART_Transmit_IT(&huart6, &output_byte, 1);
+			if (!queue_is_empty(output_queue)) {
+				output_byte = queue_pop(output_queue);
+				HAL_UART_Transmit_IT(&huart6, &output_byte, 1);
+			}
+			else {
+				nonblocking_write_in_progress = 0;
+			}
 		}
-		else {
-			nonblocking_write_in_progress = 0;
-		}
-	}
 }
 
 void uart_io_init(struct queue* input, struct queue* output, enum uart_io_mode mode) {
@@ -75,14 +75,14 @@ void uart_io_change_mode() {
 		cur_mode = NONBLOCKING;
 		HAL_UART_Receive_IT(&huart6, &input_byte, 1);
 		HAL_NVIC_EnableIRQ(USART6_IRQn);
-		printf("\nnonblocking mode\n");
+		print_string("\n\rnonblocking mode\n\r");
 	}
 	else {
 		HAL_UART_AbortReceive(&huart6);
 		while (nonblocking_write_in_progress) {}
 		HAL_NVIC_DisableIRQ(USART6_IRQn);
 		cur_mode = BLOCKING;
-		printf("\nblocking mode\n");
+		print_string("\n\rblocking mode\n\r");
 	}
 }
 

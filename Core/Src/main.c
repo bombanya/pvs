@@ -39,10 +39,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define TIME_LIMIT_TICKS 10000
+#define TIMEOUT 5000
+#define GLOW_TIME 3000
 #define CODE 0xD4
-#define TIMES_BLINK 3
-#define BLINK_PERIOD 500
+#define TIMES_BLINK 1
+#define BLINK_PERIOD 250
 #define MAX_TIMES_PRESSED_WRONG 3
 /* USER CODE END PD */
 
@@ -55,7 +56,7 @@
 
 /* USER CODE BEGIN PV */
 
-uint8_t code[8] = "abyz1239";
+uint8_t code[8] = "abuba123";
 uint8_t code_len = 8;
 uint8_t new_code[8];
 
@@ -70,6 +71,8 @@ uint8_t code_changing_waiting_for_confirmation = 0;
 struct queue input_queue;
 struct queue output_queue;
 
+char output_buffer[256];
+
 uint8_t input_byte;
 
 /* USER CODE END PV */
@@ -81,6 +84,7 @@ void set_code(uint8_t proto);
 uint8_t check_input();
 void auth(uint8_t new_input);
 void change_code(uint8_t new_input);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -106,7 +110,6 @@ int main(void)
   /* USER CODE BEGIN Init */
   input_queue = queue_init(256);
   output_queue = queue_init(256);
-  uart_io_init(&input_queue, &output_queue, NONBLOCKING);
 
   /* USER CODE END Init */
 
@@ -124,6 +127,7 @@ int main(void)
   LED_turn_off(RED);
   LED_turn_off(GREEN);
   LED_turn_off(YELLOW);
+  uart_io_init(&input_queue, &output_queue, NONBLOCKING);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -136,17 +140,18 @@ int main(void)
 	  if (!queue_is_empty(&input_queue)) {
 		  input_byte = queue_pop(&input_queue);
 		  time_last_input = HAL_GetTick();
-		  printf("%d", input_byte);
+		  sprintf(output_buffer, "%c", input_byte);
+		  print_string(output_buffer);
 
 		  if (code_changing_mode) change_code(1);
 		  else if (pos == 0 && input_byte == '+') {
-			  if (HAL_GetTick() - time_last_auth > 2 * TIME_LIMIT_TICKS)
-				  printf("\nenter your code first to change it\n");
+			  if (HAL_GetTick() - time_last_auth > 2 * TIMEOUT || time_last_auth == 0)
+				  print_string("\n\renter your code first to change it\n\r");
 			  else {
 				  pos = 0;
 				  times_pressed_wrong = 0;
 				  code_changing_mode = 1;
-				  printf("\nenter new code\n");
+				  print_string("\n\renter new code\n\r");
 			  }
 		  }
 		  else auth(1);
@@ -214,6 +219,11 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void print_string(char* string) {
+	uart_io_write_from_buffer((uint8_t *) string, strlen(string));
+}
+
 void set_code(uint8_t proto){
 	for(size_t i = 0; i < sizeof(uint8_t) * 8; i++){
 		code[i] = (proto >> (sizeof(uint8_t) * 8 - i - 1)) & 1 ? LONG : SHORT;
@@ -242,7 +252,7 @@ void auth(uint8_t new_input) {
 			  } else if (pos < code_len && input_byte != code[pos]) {
 				  times_pressed_wrong++;
 				  pos = 0;
-				  printf("\ngo away, hacker\n");
+				  print_string("\n\rgo away, hacker\n\r");
 
 				  if(times_pressed_wrong <= MAX_TIMES_PRESSED_WRONG) {
 					  uint8_t i;
@@ -252,25 +262,25 @@ void auth(uint8_t new_input) {
 				  }
 				  else {
 					  LED_turn_on(RED);
-					  HAL_Delay(TIME_LIMIT_TICKS);
+					  HAL_Delay(GLOW_TIME);
 					  LED_turn_off(RED);
 					  times_pressed_wrong = 0;
 				  }
 			  }
-		  } else if (HAL_GetTick() - time_last_input > TIME_LIMIT_TICKS &&
+		  } else if (HAL_GetTick() - time_last_input > TIMEOUT &&
 					(pos != 0 || times_pressed_wrong != 0)){
 			  pos = 0;
-			  printf("\ntoo slow\n");
+			  print_string("\n\rtoo slow\n\r");
 			  LED_turn_on(RED);
-			  HAL_Delay(TIME_LIMIT_TICKS);
+			  HAL_Delay(GLOW_TIME);
 			  LED_turn_off(RED);
 			  times_pressed_wrong = 0;
 		  }
 
 		  if (pos == code_len) {
-			  printf("\nwelcome\n");
+			  print_string("\n\rwelcome\n\r");
 			  LED_turn_on(GREEN);
-			  HAL_Delay(TIME_LIMIT_TICKS);
+			  HAL_Delay(GLOW_TIME);
 			  LED_turn_off(GREEN);
 			  pos = 0;
 			  times_pressed_wrong = 0;
@@ -287,9 +297,10 @@ void change_code(uint8_t new_input) {
 			if (input_byte == 'y') {
 				code_len = pos;
 				for (size_t i = 0; i < code_len; i++) code[i] = new_code[i];
-				printf("\ncode changed\n");
+				print_string("\n\rcode changed\n\r");
 			}
-			else printf("\ncanceling the code change\n");
+			else print_string("\n\rcanceling the code change\n\r");
+			pos = 0;
 		}
 		else {
 			if (check_input()) {
@@ -299,19 +310,19 @@ void change_code(uint8_t new_input) {
 			else if (input_byte != 13) {
 				code_changing_mode = 0;
 				pos = 0;
-				printf("\nincorrect symbol\ncanceling the code change\n");
+				print_string("\n\rincorrect symbol\n\rcanceling the code change\n\r");
 			}
-			if (input_byte == 13 || pos == 9) {
-				pos--;
+			if (input_byte == 13 || pos == 8) {
 				code_changing_waiting_for_confirmation = 1;
-				printf("\nconfirm the code change (y)\n");
+				print_string("\n\rconfirm the code change (y)\n\r");
 			}
 		}
 	}
-	else if (HAL_GetTick() - time_last_input > TIME_LIMIT_TICKS) {
+	else if (HAL_GetTick() - time_last_input > TIMEOUT) {
 		code_changing_mode = 0;
 		pos = 0;
-		printf("\ncanceling the code change\ntoo slow\n");
+		code_changing_waiting_for_confirmation = 0;
+		print_string("\n\rcanceling the code change\n\rtoo slow\n\r");
 	}
 }
 

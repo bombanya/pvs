@@ -9,6 +9,7 @@
 #define INC_UART_IO_H_
 
 #include "queue.h"
+#include "main.h"
 
 enum uart_io_mode {
 	BLOCKING,
