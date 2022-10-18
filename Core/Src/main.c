@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -75,6 +76,11 @@ char output_buffer[256];
 
 uint8_t input_byte;
 
+uint16_t music[9] = {1911, 1804, 1703, 1607, 1517, 1431, 1351, 1276, 1204};
+uint8_t music_state = 0;
+
+static TIM_OC_InitTypeDef sConfigOC = {0};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -123,11 +129,22 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART6_UART_Init();
+  MX_TIM1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   LED_turn_off(RED);
   LED_turn_off(GREEN);
   LED_turn_off(YELLOW);
   uart_io_init(&input_queue, &output_queue, NONBLOCKING);
+
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+
+  HAL_TIM_Base_Start_IT(&htim6);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -181,7 +198,7 @@ void SystemClock_Config(void)
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -190,7 +207,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 15;
-  RCC_OscInitStruct.PLL.PLLN = 216;
+  RCC_OscInitStruct.PLL.PLLN = 108;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -209,10 +226,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -222,17 +239,6 @@ void SystemClock_Config(void)
 
 void print_string(char* string) {
 	uart_io_write_from_buffer((uint8_t *) string, strlen(string));
-}
-
-void set_code(uint8_t proto){
-	for(size_t i = 0; i < sizeof(uint8_t) * 8; i++){
-		code[i] = (proto >> (sizeof(uint8_t) * 8 - i - 1)) & 1 ? LONG : SHORT;
-	}
-}
-
-int _write(int file, char *ptr, int len) {
-	uart_io_write_from_buffer((uint8_t *) ptr, len);
-	return 0;
 }
 
 uint8_t check_input() {
@@ -323,6 +329,20 @@ void change_code(uint8_t new_input) {
 		pos = 0;
 		code_changing_waiting_for_confirmation = 0;
 		print_string("\n\rcanceling the code change\n\rtoo slow\n\r");
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+
+	if (htim->Instance == TIM6) {
+		HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+		music_state = (music_state + 1) % 9;
+		htim1.Init.Period = music[music_state];
+		HAL_TIM_Base_Init(&htim1);
+		sConfigOC.Pulse = music[music_state] / 2;
+		HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1);
+
+		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	}
 }
 
