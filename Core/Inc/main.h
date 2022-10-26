@@ -60,12 +60,12 @@ void print_string(char*);
 /* Private defines -----------------------------------------------------------*/
 #define SIDE_BUTTON_Pin GPIO_PIN_15
 #define SIDE_BUTTON_GPIO_Port GPIOC
-#define GREEN_LED_Pin GPIO_PIN_13
-#define GREEN_LED_GPIO_Port GPIOD
-#define YELLOW_LED_Pin GPIO_PIN_14
-#define YELLOW_LED_GPIO_Port GPIOD
-#define RED_LED_Pin GPIO_PIN_15
-#define RED_LED_GPIO_Port GPIOD
+#define TIM4_CH2_GREEN_Pin GPIO_PIN_13
+#define TIM4_CH2_GREEN_GPIO_Port GPIOD
+#define TIM4_CH3_YELLOW_Pin GPIO_PIN_14
+#define TIM4_CH3_YELLOW_GPIO_Port GPIOD
+#define TIM4_CH4_RED_Pin GPIO_PIN_15
+#define TIM4_CH4_RED_GPIO_Port GPIOD
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

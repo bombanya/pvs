@@ -131,10 +131,8 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM1_Init();
   MX_TIM6_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-  LED_turn_off(RED);
-  LED_turn_off(GREEN);
-  LED_turn_off(YELLOW);
   uart_io_init(&input_queue, &output_queue, NONBLOCKING);
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
@@ -145,6 +143,10 @@ int main(void)
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
   HAL_TIM_Base_Start_IT(&htim6);
+
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -253,8 +255,8 @@ void auth(uint8_t new_input) {
 		if (pos < code_len && input_byte == code[pos]) {
 				  uint8_t i;
 				  pos++;
-				  for(i = 0; i < TIMES_BLINK; i++)
-					  LED_blink(YELLOW, BLINK_PERIOD);
+				  //for(i = 0; i < TIMES_BLINK; i++)
+					  //LED_blink(YELLOW, BLINK_PERIOD);
 			  } else if (pos < code_len && input_byte != code[pos]) {
 				  times_pressed_wrong++;
 				  pos = 0;
@@ -263,13 +265,13 @@ void auth(uint8_t new_input) {
 				  if(times_pressed_wrong <= MAX_TIMES_PRESSED_WRONG) {
 					  uint8_t i;
 					  for(i = 0; i < TIMES_BLINK; i++){
-						  LED_blink(RED, BLINK_PERIOD);
+						  //LED_blink(RED, BLINK_PERIOD);
 					  }
 				  }
 				  else {
-					  LED_turn_on(RED);
+					  //LED_turn_on(RED);
 					  HAL_Delay(GLOW_TIME);
-					  LED_turn_off(RED);
+					  //LED_turn_off(RED);
 					  times_pressed_wrong = 0;
 				  }
 			  }
@@ -277,17 +279,17 @@ void auth(uint8_t new_input) {
 					(pos != 0 || times_pressed_wrong != 0)){
 			  pos = 0;
 			  print_string("\n\rtoo slow\n\r");
-			  LED_turn_on(RED);
+			  //LED_turn_on(RED);
 			  HAL_Delay(GLOW_TIME);
-			  LED_turn_off(RED);
+			  //LED_turn_off(RED);
 			  times_pressed_wrong = 0;
 		  }
 
 		  if (pos == code_len) {
 			  print_string("\n\rwelcome\n\r");
-			  LED_turn_on(GREEN);
+			  //LED_turn_on(GREEN);
 			  HAL_Delay(GLOW_TIME);
-			  LED_turn_off(GREEN);
+			  //LED_turn_off(GREEN);
 			  pos = 0;
 			  times_pressed_wrong = 0;
 			  time_last_auth = HAL_GetTick();

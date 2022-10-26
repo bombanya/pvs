@@ -16,10 +16,15 @@ enum color {
 	YELLOW
 };
 
-void LED_turn_on(enum color col);
+enum brightness {
+	FULL = 100,
+	HALF = 50,
+	LOW = 20,
+	OFF = 0
+};
 
-void LED_turn_off(enum color col);
+void LED_set(enum color col, enum brightness);
 
-void LED_blink(enum color col, uint32_t period);
+void LED_turn_off_all();
 
 #endif /* INC_LED_H_ */
