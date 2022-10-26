@@ -79,8 +79,6 @@ uint8_t input_byte;
 uint16_t music[9] = {1911, 1804, 1703, 1607, 1517, 1431, 1351, 1276, 1204};
 uint8_t music_state = 0;
 
-static TIM_OC_InitTypeDef sConfigOC = {0};
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -134,13 +132,6 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   uart_io_init(&input_queue, &output_queue, NONBLOCKING);
-
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
   HAL_TIM_Base_Start_IT(&htim6);
 
@@ -337,14 +328,7 @@ void change_code(uint8_t new_input) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if (htim->Instance == TIM6) {
-		HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-		music_state = (music_state + 1) % 9;
-		htim1.Init.Period = music[music_state];
-		HAL_TIM_Base_Init(&htim1);
-		sConfigOC.Pulse = music[music_state] / 2;
-		HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1);
 
-		HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	}
 }
 
