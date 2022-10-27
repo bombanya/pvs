@@ -17,9 +17,9 @@ static TIM_OC_InitTypeDef pwm_config = {
 		.OCNIdleState = TIM_OCNIDLESTATE_RESET
 };
 
-void speaker_play(struct note note) {
+void speaker_play(enum notes note) {
 	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-	htim1.Init.Period =  1 / note.frequency * 1000000;
+	htim1.Init.Period =  1 / note * 1000000;
 	HAL_TIM_Base_Init(&htim1);
 	pwm_config.Pulse = htim1.Init.Period / 2;
 	HAL_TIM_PWM_ConfigChannel(&htim1, &pwm_config, TIM_CHANNEL_1);

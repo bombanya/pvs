@@ -128,12 +128,10 @@ int main(void)
   MX_GPIO_Init();
   MX_USART6_UART_Init();
   MX_TIM1_Init();
-  MX_TIM6_Init();
   MX_TIM4_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   uart_io_init(&input_queue, &output_queue, NONBLOCKING);
-
-  HAL_TIM_Base_Start_IT(&htim6);
 
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
