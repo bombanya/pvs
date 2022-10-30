@@ -9,6 +9,7 @@
 #define INC_MELODY_H_
 
 #include <stddef.h>
+#include "keys.h"
 #include "LED.h"
 #include "speaker.h"
 
@@ -16,7 +17,7 @@ struct sound {
 	enum notes note;
 	enum color color;
 	enum brightness brightness;
-	char symbol;
+	enum keys key;
 };
 
 typedef struct sound sound;
@@ -38,6 +39,8 @@ extern const sound si;
 extern const sound ut_2;
 
 extern const sound re_2;
+
+extern const sound no_sound;
 
 enum command {
 	WAIT, PLAY
@@ -72,5 +75,7 @@ void melody_add_play(struct melody *melody, sound s);
 void melody_add_wait(struct melody *melody, uint32_t wait_ms);
 
 void melody_destroy(struct melody);
+
+sound sound_by_key(enum keys);
 
 #endif /* INC_MELODY_H_ */
