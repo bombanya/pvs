@@ -7,7 +7,9 @@
 
 #include "game.h"
 
-#define PLAY_TIME_MS 1000
+#include "main.h"
+
+#define PLAY_TIME_MS 500
 #define START_TIMEOUT_MS 3000
 #define SPEED_NORM 10
 
@@ -25,6 +27,8 @@ static struct melody *melody;
 static int i = 0;
 
 static bool processing = false;
+
+static bool pressed = false;
 
 static uint32_t timeout = 0;
 
@@ -71,8 +75,9 @@ void game_key_pressed(enum keys key){
 			play_sound(s);
 		} else {
 			sound cur = get_current_sound();
-			if(cur.key == key) {
+			if(cur.key == key && !pressed) {
 				score_pressed(true);
+				pressed = true;
 			} else {
 				score_pressed(false);
 			}
@@ -87,6 +92,8 @@ void game_key_pressed(enum keys key){
 	case KEY_ENTER:
 		change_mode();
 		break;
+	case NO_KEY: default:
+		break;
 	}
 }
 
@@ -95,6 +102,8 @@ void game_timeout_callback()
 	if (processing){
 		timeout --;
 		if (timeout == 0) {
+			if(!pressed)
+				score_pressed(false);
 			LED_turn_off_all();
 			speaker_stop();
 			processing = false;
@@ -119,12 +128,15 @@ static void game_play_melody()
 	i = 0;
 	timeout = START_TIMEOUT_MS;
 	score_start();
+	pressed = false;
+	main_notify_game_started();
 	processing = true;
 }
 
 static void do_next_command()
 {
 	if (i < melody->size) {
+		pressed = false;
 		union player_command command = melody->commands[i];
 		if (command.command == PLAY) {
 			sound s = command.play.s;
@@ -135,6 +147,7 @@ static void do_next_command()
 		processing = true;
 	} else {
 		mode = SYNTH;
+		main_notify_game_finished();
 	}
 }
 

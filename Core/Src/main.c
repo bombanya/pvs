@@ -25,12 +25,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "LED.h"
-#include "side_button.h"
-#include "queue.h"
-#include "uart_io.h"
 #include <stdio.h>
 #include <string.h>
+#include "game.h"
+#include "LED.h"
+#include "queue.h"
+#include "speaker.h"
+#include "uart_io.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,39 +57,20 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
-uint8_t code[8] = "abuba123";
-uint8_t code_len = 8;
-uint8_t new_code[8];
-
-uint8_t pos = 0;
-uint8_t times_pressed_wrong = 0;
-uint32_t time_last_input = 0;
-uint32_t time_last_auth = 0;
-
-uint8_t code_changing_mode = 0;
-uint8_t code_changing_waiting_for_confirmation = 0;
-
 struct queue input_queue;
 struct queue output_queue;
 
 char output_buffer[256];
 
 uint8_t input_byte;
-
-uint16_t music[9] = {1911, 1804, 1703, 1607, 1517, 1431, 1351, 1276, 1204};
-uint8_t music_state = 0;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-void set_code(uint8_t proto);
-uint8_t check_input();
-void auth(uint8_t new_input);
-void change_code(uint8_t new_input);
-
+bool check_input();
+enum keys char_to_key(char c);
+struct melody init_melody();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -103,7 +85,7 @@ void change_code(uint8_t new_input);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	struct melody melody;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -131,50 +113,35 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-  uart_io_init(&input_queue, &output_queue, NONBLOCKING);
+  uart_io_init(&input_queue, &output_queue);
 
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+  melody = init_melody();
+  game_register_melody(&melody);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	  side_button_pressed_callback();
-	  uart_io_read_data();
+	while (1) {
+		if (!queue_is_empty(&input_queue)) {
+			input_byte = queue_pop(&input_queue);
+			sprintf(output_buffer, "%c", input_byte);
+			print_string(output_buffer);
+			if (check_input()) {
+				game_key_pressed(char_to_key(input_byte));
+			} else {
+				sprintf(output_buffer, "Wrong symbol: %c\r\n", input_byte);
+				print_string(output_buffer);
+			}
+		}
 
-	  if (!queue_is_empty(&input_queue)) {
-		  input_byte = queue_pop(&input_queue);
-		  time_last_input = HAL_GetTick();
-		  sprintf(output_buffer, "%c", input_byte);
-		  print_string(output_buffer);
+		/* USER CODE END WHILE */
 
-		  if (code_changing_mode) change_code(1);
-		  else if (pos == 0 && input_byte == '+') {
-			  if (HAL_GetTick() - time_last_auth > 2 * TIMEOUT || time_last_auth == 0)
-				  print_string("\n\renter your code first to change it\n\r");
-			  else {
-				  pos = 0;
-				  times_pressed_wrong = 0;
-				  code_changing_mode = 1;
-				  print_string("\n\renter new code\n\r");
-			  }
-		  }
-		  else auth(1);
-	  }
-
-	  if (code_changing_mode) change_code(0);
-	  else auth(0);
-
-	  if (side_button_get_pressed()) uart_io_change_mode();
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+		/* USER CODE BEGIN 3 */
+	}
+	/* USER CODE END 3 */
 }
 
 /**
@@ -232,101 +199,89 @@ void print_string(char* string) {
 	uart_io_write_from_buffer((uint8_t *) string, strlen(string));
 }
 
-uint8_t check_input() {
-	if (input_byte >= 65 && input_byte <= 90) input_byte += 32;
+bool check_input() {
 	return ((input_byte >= '0' && input_byte <= '9')
-			|| (input_byte >= 'a' && input_byte <= 'z'));
+			|| input_byte == '+'
+			|| input_byte == 'a'
+			|| input_byte == '\n');
 }
 
-void auth(uint8_t new_input) {
-	if (new_input) {
-		check_input();
-		if (pos < code_len && input_byte == code[pos]) {
-				  uint8_t i;
-				  pos++;
-				  //for(i = 0; i < TIMES_BLINK; i++)
-					  //LED_blink(YELLOW, BLINK_PERIOD);
-			  } else if (pos < code_len && input_byte != code[pos]) {
-				  times_pressed_wrong++;
-				  pos = 0;
-				  print_string("\n\rgo away, hacker\n\r");
-
-				  if(times_pressed_wrong <= MAX_TIMES_PRESSED_WRONG) {
-					  uint8_t i;
-					  for(i = 0; i < TIMES_BLINK; i++){
-						  //LED_blink(RED, BLINK_PERIOD);
-					  }
-				  }
-				  else {
-					  //LED_turn_on(RED);
-					  HAL_Delay(GLOW_TIME);
-					  //LED_turn_off(RED);
-					  times_pressed_wrong = 0;
-				  }
-			  }
-		  } else if (HAL_GetTick() - time_last_input > TIMEOUT &&
-					(pos != 0 || times_pressed_wrong != 0)){
-			  pos = 0;
-			  print_string("\n\rtoo slow\n\r");
-			  //LED_turn_on(RED);
-			  HAL_Delay(GLOW_TIME);
-			  //LED_turn_off(RED);
-			  times_pressed_wrong = 0;
-		  }
-
-		  if (pos == code_len) {
-			  print_string("\n\rwelcome\n\r");
-			  //LED_turn_on(GREEN);
-			  HAL_Delay(GLOW_TIME);
-			  //LED_turn_off(GREEN);
-			  pos = 0;
-			  times_pressed_wrong = 0;
-			  time_last_auth = HAL_GetTick();
-		  }
+struct melody init_melody(){
+	struct melody melody = melody_init(28);
+	melody_add_play(&melody, re);
+	melody_add_play(&melody, re);
+	melody_add_play(&melody, ut);
+	melody_add_wait(&melody, 200);
+	melody_add_play(&melody, fa);
+	melody_add_play(&melody, fa);
+	melody_add_play(&melody, sol);
+	melody_add_wait(&melody, 500);
+	melody_add_play(&melody, mi);
+	melody_add_play(&melody, la);
+	melody_add_play(&melody, la);
+	melody_add_play(&melody, mi);
+	melody_add_wait(&melody, 300);
+	melody_add_play(&melody, re);
+	melody_add_play(&melody, re);
+	melody_add_play(&melody, ut);
+	melody_add_wait(&melody, 200);
+	melody_add_play(&melody, re_2);
+	melody_add_play(&melody, ut_2);
+	melody_add_play(&melody, si);
+	melody_add_play(&melody, si);
+	melody_add_play(&melody, si);
+	melody_add_play(&melody, re_2);
+	melody_add_play(&melody, re);
+	melody_add_wait(&melody, 500);
+	melody_add_play(&melody, fa);
+	melody_add_play(&melody, fa);
+	melody_add_play(&melody, mi);
+	return melody;
 }
 
+enum keys char_to_key(char c){
+	switch(c){
+	case '1':
+		return KEY_1;
+	case '2':
+		return KEY_2;
+	case '3':
+		return KEY_3;
+	case '4':
+		return KEY_4;
+	case '5':
+		return KEY_5;
+	case '6':
+		return KEY_6;
+	case '7':
+		return KEY_7;
+	case '8':
+		return KEY_8;
+	case '9':
+		return KEY_9;
+	case 'a':
+		return KEY_A;
+	case '+':
+		return KEY_PLUS;
+	case '\n':
+		return KEY_ENTER;
+	default:
+		return NO_KEY;
+	}
+}
 
-void change_code(uint8_t new_input) {
-	if (new_input) {
-		if (code_changing_waiting_for_confirmation) {
-			code_changing_waiting_for_confirmation = 0;
-			code_changing_mode = 0;
-			if (input_byte == 'y') {
-				code_len = pos;
-				for (size_t i = 0; i < code_len; i++) code[i] = new_code[i];
-				print_string("\n\rcode changed\n\r");
-			}
-			else print_string("\n\rcanceling the code change\n\r");
-			pos = 0;
-		}
-		else {
-			if (check_input()) {
-				new_code[pos] = input_byte;
-				pos++;
-			}
-			else if (input_byte != 13) {
-				code_changing_mode = 0;
-				pos = 0;
-				print_string("\n\rincorrect symbol\n\rcanceling the code change\n\r");
-			}
-			if (input_byte == 13 || pos == 8) {
-				code_changing_waiting_for_confirmation = 1;
-				print_string("\n\rconfirm the code change (y)\n\r");
-			}
-		}
-	}
-	else if (HAL_GetTick() - time_last_input > TIMEOUT) {
-		code_changing_mode = 0;
-		pos = 0;
-		code_changing_waiting_for_confirmation = 0;
-		print_string("\n\rcanceling the code change\n\rtoo slow\n\r");
-	}
+void main_notify_game_started(){
+	print_string("Game is starting!");
+}
+void main_notify_game_finished(){
+	sprintf(output_buffer, "Game finished! Your score is: %"PRIu32"!", game_get_score());
+	print_string(output_buffer);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
 	if (htim->Instance == TIM6) {
-
+		game_timeout_callback();
 	}
 }
 

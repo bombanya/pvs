@@ -9,6 +9,7 @@
 #define INC_KEYS_H_
 
 enum keys {
+	NO_KEY = -1,
 	KEY_1,
 	KEY_2,
 	KEY_3,

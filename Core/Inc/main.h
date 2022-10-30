@@ -55,6 +55,8 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 void print_string(char*);
+void main_notify_game_started();
+void main_notify_game_finished();
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

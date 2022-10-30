@@ -37,7 +37,7 @@ struct melody melody_init(size_t sound_cnt){
 	struct melody m = {};
 	m.size = sound_cnt;
 	m.current = 0;
-	m.commands = malloc(sound_cnt);
+	m.commands = malloc(sound_cnt * sizeof(union player_command));
 	return m;
 }
 
@@ -66,7 +66,7 @@ void melody_add_wait(struct melody *melody, uint32_t wait_ms){
 }
 
 sound sound_by_key(enum keys key){
-	size_t len = sizeof(sounds);
+	size_t len = sizeof(sounds) / sizeof(sounds[0]);
 	size_t i;
 	for(i = 0; i < len; i++){
 		if(sounds[i].key == key)

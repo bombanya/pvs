@@ -11,14 +11,7 @@
 #include "queue.h"
 #include "main.h"
 
-enum uart_io_mode {
-	BLOCKING,
-	NONBLOCKING
-};
-
-void uart_io_init(struct queue* input, struct queue* output, enum uart_io_mode mode);
-void uart_io_read_data();
+void uart_io_init(struct queue* input, struct queue* output);
 void uart_io_write_from_buffer(uint8_t* buffer, size_t len);
-void uart_io_change_mode();
 
 #endif /* INC_UART_IO_H_ */
