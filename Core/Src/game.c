@@ -125,7 +125,7 @@ uint32_t game_get_score(){
 
 static void game_play_melody()
 {
-	i = 0;
+	i = -1;
 	timeout = START_TIMEOUT_MS;
 	score_start();
 	pressed = false;
@@ -191,7 +191,7 @@ static void change_mode()
 	} else {
 		mode = SYNTH;
 		processing = false;
-		i = 0;
+		i = -1;
 	}
 }
 
