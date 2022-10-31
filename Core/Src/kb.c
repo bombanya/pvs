@@ -8,6 +8,7 @@
 #include "kb.h"
 #include "pca9538.h"
 #include "uart_io.h"
+#include "main.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -51,11 +52,17 @@ void kb_tim_callback() {
 }
 
 void kb_change_mode() {
-	if (cur_mode == TEST) cur_mode = WORK;
-	else cur_mode = TEST;
+	if (cur_mode == TEST) {
+		cur_mode = WORK;
+		print_string("keyboard is in WORK mode\n\r");
+	}
+	else {
+		cur_mode = TEST;
+		print_string("keyboard is in TEST mode\n\r");
+	}
 }
 
-void handle_input() {
+static void handle_input() {
 	if (cur_mode == TEST) {
 		sprintf(output_buffer, "%c\n\r", input);
 		uart_io_write_from_buffer((uint8_t*) output_buffer, strlen(output_buffer));
