@@ -1,7 +1,7 @@
 /*
  * kb.c
  *
- *  Created on: Oct 27, 2022
+ *  Created on: Nov 1, 2022
  *      Author: Merlin
  */
 
@@ -62,6 +62,19 @@ void kb_change_mode() {
 	}
 }
 
+int8_t kb_check_row(uint8_t row_n) {
+	uint8_t tmp = 0;
+	pca9538_write_register(KB_ADDR, OUTPUT_PORT, &tmp);
+	pca9538_write_register(KB_ADDR, CONFIG, &(rows[row_n]));
+	pca9538_read_inputs(KB_ADDR, &row_data);
+
+	for (uint8_t i = 0; i < 3; i++) {
+		if (!(row_data & btns[i])) {
+			return i;
+		}
+	}
+	return -1;
+}
 static void handle_input() {
 	if (cur_mode == TEST) {
 		sprintf(output_buffer, "%c\n\r", input);

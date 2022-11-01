@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "i2c.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -32,6 +33,8 @@
 #include "queue.h"
 #include "speaker.h"
 #include "uart_io.h"
+#include "kb.h"
+#include "pca9538.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,8 +62,12 @@
 /* USER CODE BEGIN PV */
 struct queue input_queue;
 struct queue output_queue;
+struct queue kb_queue;
 
 char output_buffer[256];
+
+uint8_t row_n = 0;
+uint8_t btn_res;
 
 uint8_t input_byte;
 /* USER CODE END PV */
@@ -96,7 +103,7 @@ int main(void)
   /* USER CODE BEGIN Init */
   input_queue = queue_init(256);
   output_queue = queue_init(256);
-
+  kb_queue = queue_init(256);
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -112,21 +119,31 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM4_Init();
   MX_TIM6_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   uart_io_init(&input_queue, &output_queue);
+  kb_init(&kb_queue, TEST);
+  melody = init_melody();
+  game_register_melody(&melody);
 
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
   HAL_TIM_Base_Start_IT(&htim6);
-  melody = init_melody();
-  game_register_melody(&melody);
+  //HAL_TIM_Base_Start_IT(&htim7);
+
   print_string("Init complete\n\r");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1) {
+
+		btn_res = kb_check_row(btn_res);
+		btn_res = (btn_res + 1) % 4;
+		sprintf(output_buffer, "%d\n\r", btn_res);
+		print_string(output_buffer);
+
 		if (!queue_is_empty(&input_queue)) {
 			input_byte = queue_pop(&input_queue);
 			sprintf(output_buffer, "%c\n\r", input_byte);
@@ -283,6 +300,9 @@ void main_notify_game_finished(){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM6) {
 		game_timeout_callback();
+	}
+	else if (htim->Instance == TIM7) {
+		kb_tim_callback();
 	}
 }
 

@@ -1,7 +1,7 @@
 /*
  * pca9538.h
  *
- *  Created on: Oct 27, 2022
+ *  Created on: Nov 1, 2022
  *      Author: Merlin
  */
 
@@ -20,5 +20,6 @@ enum pca9538_reg {
 void pca9538_write_register(uint16_t addr, enum pca9538_reg reg, uint8_t* buf);
 void pca9538_write_register_it(uint16_t addr, enum pca9538_reg reg, uint8_t* buf);
 void pca9538_read_inputs_it(uint16_t addr, uint8_t* buf);
+void pca9538_read_inputs(uint16_t addr, uint8_t* buf);
 
 #endif /* INC_PCA9538_H_ */

@@ -1,7 +1,7 @@
 /*
  * kb.h
  *
- *  Created on: Oct 27, 2022
+ *  Created on: Nov 1, 2022
  *      Author: Merlin
  */
 
@@ -21,5 +21,6 @@ bool kb_input_is_empty();
 uint8_t kb_input_pop();
 void kb_tim_callback();
 void kb_change_mode();
+int8_t kb_check_row(uint8_t row_n);
 
 #endif /* INC_KB_H_ */
