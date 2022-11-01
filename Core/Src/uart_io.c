@@ -11,7 +11,6 @@
 
 static struct queue* input_queue;
 static struct queue* output_queue;
-static enum uart_io_mode cur_mode;
 
 static uint8_t input_byte;
 static uint8_t output_byte;
@@ -37,53 +36,23 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 		}
 }
 
-void uart_io_init(struct queue* input, struct queue* output, enum uart_io_mode mode) {
+void uart_io_init(struct queue* input, struct queue* output) {
 	input_queue = input;
 	output_queue = output;
-	cur_mode = mode;
-
-	if (cur_mode == NONBLOCKING) HAL_UART_Receive_IT(&huart6, &input_byte, 1);
+	HAL_UART_Receive_IT(&huart6, &input_byte, 1);
 }
 
-void uart_io_read_data() {
-	if (cur_mode == BLOCKING) {
-		HAL_StatusTypeDef result = HAL_UART_Receive(&huart6, &input_byte, 1, 5);
-		if (result == HAL_OK) queue_push(input_queue, input_byte);
+void uart_io_write_from_buffer(uint8_t *buffer, size_t len) {
+	HAL_NVIC_DisableIRQ(USART6_IRQn);
+	for (size_t i = 0; i < len; i++) {
+		queue_push(output_queue, buffer[i]);
 	}
-}
-
-void uart_io_write_from_buffer(uint8_t* buffer, size_t len) {
-	if (cur_mode == BLOCKING) {
-		HAL_UART_Transmit(&huart6, buffer, len, 100);
+	if (!nonblocking_write_in_progress) {
+		nonblocking_write_in_progress = 1;
+		output_byte = queue_pop(output_queue);
+		HAL_UART_Transmit_IT(&huart6, &output_byte, 1);
 	}
-	else {
-		HAL_NVIC_DisableIRQ(USART6_IRQn);
-		for (size_t i = 0; i < len; i++) {
-			queue_push(output_queue, buffer[i]);
-		}
-		if (!nonblocking_write_in_progress) {
-			nonblocking_write_in_progress = 1;
-			output_byte = queue_pop(output_queue);
-			HAL_UART_Transmit_IT(&huart6, &output_byte, 1);
-		}
-		HAL_NVIC_EnableIRQ(USART6_IRQn);
-	}
-}
-
-void uart_io_change_mode() {
-	if (cur_mode == BLOCKING) {
-		cur_mode = NONBLOCKING;
-		HAL_UART_Receive_IT(&huart6, &input_byte, 1);
-		HAL_NVIC_EnableIRQ(USART6_IRQn);
-		print_string("\n\rnonblocking mode\n\r");
-	}
-	else {
-		HAL_UART_AbortReceive(&huart6);
-		while (nonblocking_write_in_progress) {}
-		HAL_NVIC_DisableIRQ(USART6_IRQn);
-		cur_mode = BLOCKING;
-		print_string("\n\rblocking mode\n\r");
-	}
+	HAL_NVIC_EnableIRQ(USART6_IRQn);
 }
 
 
