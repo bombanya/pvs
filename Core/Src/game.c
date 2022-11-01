@@ -9,7 +9,7 @@
 
 #include "main.h"
 
-#define PLAY_TIME_MS 500
+#define PLAY_TIME_MS 2000
 #define START_TIMEOUT_MS 3000
 #define SPEED_NORM 10
 
@@ -37,10 +37,10 @@ static uint32_t score = 0;
 static uint32_t modifier = 0;
 
 static enum speed {
-	SLOW = 8,
+	SLOW = 12,
 	MEDIUM = 10,
-	FAST = 12
-} speed;
+	FAST = 5
+} speed = MEDIUM;
 
 static void do_next_command();
 
@@ -70,12 +70,15 @@ void game_key_pressed(enum keys key){
 	case KEY_1: case KEY_2: case KEY_3:
 	case KEY_4: case KEY_5: case KEY_6:
 	case KEY_7: case KEY_8: case KEY_9:
+	{
+		sound s = sound_by_key(key);
+		print_string(melody_sound_to_string(s));
 		if (mode == SYNTH) {
-			sound s = sound_by_key(key);
+			pressed = true;
 			play_sound(s);
 		} else {
 			sound cur = get_current_sound();
-			if(cur.key == key && !pressed) {
+			if (cur.key == key && !pressed) {
 				score_pressed(true);
 				pressed = true;
 			} else {
@@ -83,6 +86,7 @@ void game_key_pressed(enum keys key){
 			}
 		}
 		break;
+	}
 	case KEY_A:
 		change_peripheral();
 		break;
@@ -128,7 +132,7 @@ static void game_play_melody()
 	i = -1;
 	timeout = START_TIMEOUT_MS;
 	score_start();
-	pressed = false;
+	pressed = true;
 	main_notify_game_started();
 	processing = true;
 }
@@ -143,6 +147,7 @@ static void do_next_command()
 			play_sound(s);
 		} else {
 			timeout = command.wait.wait_ms * speed / SPEED_NORM;
+			pressed = true;
 		}
 		processing = true;
 	} else {
@@ -153,6 +158,7 @@ static void do_next_command()
 
 static void play_sound(sound s)
 {
+	LED_turn_off_all();
 	if (speaker)
 		speaker_play(s.note);
 	if (lights)
@@ -163,6 +169,9 @@ static void play_sound(sound s)
 
 static sound get_current_sound()
 {
+	if (i == 27) {
+		print_string("break\n\r");
+	}
 	union player_command command = melody->commands[i];
 	if (command.command == PLAY) {
 		return command.play.s;
@@ -175,11 +184,14 @@ static void change_peripheral()
 {
 	if (speaker && lights) {
 		speaker = false;
+		print_string("only lights\n\r");
 	} else if(lights) {
 		lights = false;
 		speaker = true;
+		print_string("only speaker\n\r");
 	} else {
 		lights = true;
+		print_string("speaker & lights\n\r");
 	}
 }
 
@@ -191,7 +203,9 @@ static void change_mode()
 	} else {
 		mode = SYNTH;
 		processing = false;
-		i = -1;
+		LED_turn_off_all();
+		speaker_stop();
+		main_notify_game_finished();
 	}
 }
 
@@ -199,12 +213,15 @@ static void change_game_speed(){
 	switch(speed){
 	case FAST:
 		speed = SLOW;
+		print_string("SLOW mode\n\r");
 		break;
 	case MEDIUM:
 		speed = FAST;
+		print_string("FAST mode\n\r");
 		break;
 	case SLOW:
 		speed = MEDIUM;
+		print_string("MEDIUM mode\n\r");
 		break;
 	default:
 		speed = MEDIUM;
@@ -221,9 +238,11 @@ static void score_start()
 static void score_pressed(bool right)
 {
 	if (right) {
+		print_string("correct!\n\r");
 		score += modifier;
 		modifier++;
 	} else {
+		print_string("miss!\n\r");
 		modifier = 1;
 	}
 }

@@ -7,6 +7,9 @@
 
 #include <stdlib.h>
 #include "melody.h"
+#include <stdio.h>
+
+static char output_buffer[256];
 
 const sound ut =
 		{ .note = C, .color = GREEN, .brightness = FULL, .key = KEY_1};
@@ -48,20 +51,20 @@ void melody_destroy(struct melody melody){
 }
 
 void melody_add_play(struct melody *melody, sound s){
-	if(melody->current < melody->size - 1){
-		melody->current += 1;
+	if(melody->current < melody->size){
 		union player_command *command = &(melody->commands[melody->current]);
 		command->command = PLAY;
 		command->play.s = s;
+		melody->current += 1;
 	}
 }
 
 void melody_add_wait(struct melody *melody, uint32_t wait_ms){
-	if(melody->current < melody->size -1){
-		melody->current +=1;
+	if(melody->current < melody->size){
 		union player_command *command = &(melody->commands[melody->current]);
 		command->command = WAIT;
 		command->wait.wait_ms = wait_ms;
+		melody->current +=1;
 	}
 }
 
@@ -73,4 +76,9 @@ sound sound_by_key(enum keys key){
 			return sounds[i];
 	}
 	return no_sound;
+}
+
+char* melody_sound_to_string(struct sound sound) {
+	sprintf(output_buffer, "%s / %s / %d Hz\n\r", LED_color_name(sound.color), LED_brightness_name(sound.brightness), sound.note);
+	return output_buffer;
 }

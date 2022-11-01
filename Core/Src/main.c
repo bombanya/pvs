@@ -118,8 +118,10 @@ int main(void)
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
+  HAL_TIM_Base_Start_IT(&htim6);
   melody = init_melody();
   game_register_melody(&melody);
+  print_string("Init complete\n\r");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -127,21 +129,21 @@ int main(void)
 	while (1) {
 		if (!queue_is_empty(&input_queue)) {
 			input_byte = queue_pop(&input_queue);
-			sprintf(output_buffer, "%c", input_byte);
+			sprintf(output_buffer, "%c\n\r", input_byte);
 			print_string(output_buffer);
 			if (check_input()) {
 				game_key_pressed(char_to_key(input_byte));
 			} else {
-				sprintf(output_buffer, "Wrong symbol: %c\r\n", input_byte);
+				sprintf(output_buffer, "Wrong symbol: %c\n\r", input_byte);
 				print_string(output_buffer);
 			}
 		}
 
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
@@ -200,41 +202,41 @@ void print_string(char* string) {
 }
 
 bool check_input() {
-	return ((input_byte >= '0' && input_byte <= '9')
+	return ((input_byte >= '1' && input_byte <= '9')
 			|| input_byte == '+'
 			|| input_byte == 'a'
-			|| input_byte == '\n');
+			|| input_byte == '\r');
 }
 
 struct melody init_melody(){
 	struct melody melody = melody_init(28);
 	melody_add_play(&melody, re);
-	melody_add_play(&melody, re);
+	melody_add_play(&melody, fa);
 	melody_add_play(&melody, ut);
 	melody_add_wait(&melody, 200);
 	melody_add_play(&melody, fa);
-	melody_add_play(&melody, fa);
+	melody_add_play(&melody, mi);
 	melody_add_play(&melody, sol);
 	melody_add_wait(&melody, 500);
 	melody_add_play(&melody, mi);
 	melody_add_play(&melody, la);
-	melody_add_play(&melody, la);
+	melody_add_play(&melody, si);
 	melody_add_play(&melody, mi);
 	melody_add_wait(&melody, 300);
 	melody_add_play(&melody, re);
-	melody_add_play(&melody, re);
+	melody_add_play(&melody, fa);
 	melody_add_play(&melody, ut);
 	melody_add_wait(&melody, 200);
 	melody_add_play(&melody, re_2);
 	melody_add_play(&melody, ut_2);
 	melody_add_play(&melody, si);
-	melody_add_play(&melody, si);
-	melody_add_play(&melody, si);
+	melody_add_play(&melody, la);
+	melody_add_play(&melody, sol);
 	melody_add_play(&melody, re_2);
 	melody_add_play(&melody, re);
 	melody_add_wait(&melody, 500);
 	melody_add_play(&melody, fa);
-	melody_add_play(&melody, fa);
+	melody_add_play(&melody, si);
 	melody_add_play(&melody, mi);
 	return melody;
 }
@@ -263,7 +265,7 @@ enum keys char_to_key(char c){
 		return KEY_A;
 	case '+':
 		return KEY_PLUS;
-	case '\n':
+	case '\r':
 		return KEY_ENTER;
 	default:
 		return NO_KEY;
@@ -271,15 +273,14 @@ enum keys char_to_key(char c){
 }
 
 void main_notify_game_started(){
-	print_string("Game is starting!");
+	print_string("Game is starting!\n\r");
 }
 void main_notify_game_finished(){
-	sprintf(output_buffer, "Game finished! Your score is: %"PRIu32"!", game_get_score());
+	sprintf(output_buffer, "Game finished! Your score is: %"PRIu32"!\n\r", game_get_score());
 	print_string(output_buffer);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-
 	if (htim->Instance == TIM6) {
 		game_timeout_callback();
 	}

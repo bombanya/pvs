@@ -11,7 +11,7 @@
 #include <inttypes.h>
 
 enum color {
-	RED,
+	RED = 0,
 	GREEN,
 	YELLOW
 };
@@ -26,5 +26,9 @@ enum brightness {
 void LED_set(enum color col, enum brightness);
 
 void LED_turn_off_all();
+
+char* LED_color_name(enum color);
+
+char * LED_brightness_name(enum brightness);
 
 #endif /* INC_LED_H_ */

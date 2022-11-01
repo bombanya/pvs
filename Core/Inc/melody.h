@@ -78,4 +78,6 @@ void melody_destroy(struct melody);
 
 sound sound_by_key(enum keys);
 
+char* melody_sound_to_string(struct sound);
+
 #endif /* INC_MELODY_H_ */
